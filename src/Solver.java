@@ -1,6 +1,9 @@
 public class Solver {
+    private Board initial;
+
     public Solver(Board initial) {
         // find a solution to the initial board (using the A* algorithm)
+        this.initial = initial;
     }
 
     public boolean isSolvable() {
@@ -15,6 +18,7 @@ public class Solver {
 
     public Iterable<Board> solution() {
         // sequence of boards in a shortest solution; null if unsolvable
+        return null;
     }
 
     public static void main(String[] args) {
