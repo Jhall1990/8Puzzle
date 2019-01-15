@@ -1,13 +1,10 @@
 import java.util.ArrayList;
-import edu.princeton.cs.algs4.MinPQ;
 
 
 public class Board {
     private final int[][] blocks;
-    private final int moves;
     private int hamCount;
     private int manCount;
-    private MinPQ q;
 
     public Board(int[][] blocks) {
         // construct a board from an n-by-n array of blocks
@@ -22,8 +19,9 @@ public class Board {
             this.blocks[i] = blocks[i].clone();
         }
 
-        this.moves = 0;
+        // Update ham and man counts.
         getSearchCounts();
+
     }
 
     public int dimension() {
@@ -33,17 +31,17 @@ public class Board {
 
     public int hamming() {
         // number of blocks out of place
-        return hamCount + moves;
+        return hamCount;
     }
 
     public int manhattan() {
         // sum of Manhattan distances between blocks and goal
-        return manCount + moves;
+        return manCount;
     }
 
     public boolean isGoal() {
         // is this board the goal board?
-        return hamming() - moves == 0;
+        return hamming() == 0;
     }
 
     public Board twin() {
@@ -62,26 +60,98 @@ public class Board {
                 if (coords.size() > 1)
                     break;
             }
+            if (coords.size() > 1)
+                break;
         }
 
         int copyBlockOrig = blocks[coords.get(0)[0]][coords.get(0)[1]];
         blocksCopy[coords.get(0)[0]][coords.get(0)[1]] = blocksCopy[coords.get(1)[0]][coords.get(1)[1]];
-        blocksCopy[coords.get(0)[0]][coords.get(0)[1]] = copyBlockOrig;
+        blocksCopy[coords.get(1)[0]][coords.get(1)[1]] = copyBlockOrig;
 
         return new Board(blocksCopy);
     }
 
     public boolean equals(Object y) {
         // does this board equal y?
+        // If y is null raise return false.
         if (y == null) {
-            throw new IllegalArgumentException("y cannot be null");
+            return false;
         }
-        return toString().equals(y.toString());
+
+        // Check if y and this are the same object, return true if they are.
+        if (y == this)
+            return true;
+
+        // Check if y is the same class as this, if they aren't return false.
+        if (y.getClass() != this.getClass())
+            return false;
+
+        // Cast the passed object to a Board.
+        Board that = (Board) y;
+
+        // Check the board dimensions, if they are different return false.
+        if (that.dimension() != this.dimension())
+            return false;
+
+        // Check each space in the two boards, if they are ever not the same return false.
+        // Otherwise return true after all are checked.
+        for (int i = 0; i < that.dimension(); i++) {
+            for (int j = 0; j < that.dimension(); j++) {
+                if (that.blocks[i][j] != this.blocks[i][j])
+                    return false;
+            }
+        }
+
+        return true;
     }
 
     public Iterable<Board> neighbors() {
         // all neighboring boards
         ArrayList<Board> neighbors = new ArrayList<>();
+        int[] emptySpace = getEmptySpace();
+
+        if (emptySpace.length != 0) {
+            // move up
+            if (emptySpace[0] != 0) {
+                int movedVal = blocks[emptySpace[0] - 1][emptySpace[1]];
+                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
+                blocks[emptySpace[0] - 1][emptySpace[1]] = 0;
+                neighbors.add(new Board(blocks));
+                blocks[emptySpace[0]][emptySpace[1]] = 0;
+                blocks[emptySpace[0] - 1][emptySpace[1]] = movedVal;
+            }
+
+            // move down
+            if (emptySpace[0] != dimension() - 1) {
+                int movedVal = blocks[emptySpace[0] + 1][emptySpace[1]];
+                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
+                blocks[emptySpace[0] + 1][emptySpace[1]] = 0;
+                neighbors.add(new Board(blocks));
+                blocks[emptySpace[0]][emptySpace[1]] = 0;
+                blocks[emptySpace[0] + 1][emptySpace[1]] = movedVal;
+            }
+
+            // move left
+            if (emptySpace[1] != 0) {
+                int movedVal = blocks[emptySpace[0]][emptySpace[1] - 1];
+                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
+                blocks[emptySpace[0]][emptySpace[1] - 1] = 0;
+                neighbors.add(new Board(blocks));
+                blocks[emptySpace[0]][emptySpace[1]] = 0;
+                blocks[emptySpace[0]][emptySpace[1] - 1] = movedVal;
+            }
+
+            // move right
+            if (emptySpace[1] != dimension() - 1) {
+                int movedVal = blocks[emptySpace[0]][emptySpace[1] + 1];
+                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
+                blocks[emptySpace[0]][emptySpace[1] + 1] = 0;
+                neighbors.add(new Board(blocks));
+                blocks[emptySpace[0]][emptySpace[1]] = 0;
+                blocks[emptySpace[0]][emptySpace[1] + 1] = movedVal;
+            }
+        }
+
         return neighbors;
     }
 
@@ -89,8 +159,14 @@ public class Board {
         // string representation of this board (in the output format specified below)
         StringBuilder returnString = new StringBuilder();
 
+        returnString.append(dimension());
+        returnString.append("\n");
+
         for (int i = 0; i < dimension(); i++) {
+            returnString.append(" ");
             for (int j = 0; j < dimension(); j++) {
+                if (blocks[i][j] < 10)
+                    returnString.append(" ");
                 returnString.append(blocks[i][j]);
                 if (j != dimension() - 1) {
                     returnString.append(" ");
@@ -102,7 +178,7 @@ public class Board {
         return returnString.toString();
     }
 
-    private int[] getSearchCounts() {
+    private void getSearchCounts() {
         int expectedVal = 1;
 
         for (int i = 0; i < dimension(); i++) {
@@ -116,7 +192,6 @@ public class Board {
                 expectedVal++;
             }
         }
-        return new int[]{0, 0};
     }
 
     private void getManhattanCount(int row, int col) {
@@ -130,5 +205,20 @@ public class Board {
         int manNum = Math.abs(correctRow - row) + Math.abs(correctCol - col);
 
         manCount += manNum;
+    }
+
+    private int[] getEmptySpace() {
+        // Checks the current blocks array to find the empty space.
+        // Returns an array of ints where int[0] = x and int[1] = y.
+        // Returns null if no empty space is found.
+
+        for (int i = 0; i < dimension(); i++) {
+            for (int j = 0; j < dimension(); j++) {
+                if (blocks[i][j] == 0) {
+                    return new int[] {i, j};
+                }
+            }
+        }
+        return new int[0];
     }
 }
