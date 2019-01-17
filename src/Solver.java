@@ -28,7 +28,7 @@ public class Solver {
             twinQ.insert(new SearchNode(twin, moves));
 
             while (!origQ.isEmpty() && !twinQ.isEmpty()) {
-                moves++;
+                moves++; // can't just increment, only ++ when next level in tree.
 
                 Board origCur = origQ.delMin().board;
                 Board twinCur = twinQ.delMin().board;
@@ -52,29 +52,6 @@ public class Solver {
                         twinQ.insert(new SearchNode(neighbor, moves));
                 }
             }
-
-//            while (!origQ.min().board.isGoal() && !twinQ.min().board.isGoal()) {
-//                Board origCur = origQ.delMin().board;
-//                Board twinCur = twinQ.delMin().board;
-//                solution.add(origCur);
-//
-//                moves++;
-//
-//                for (Board neighbor : origCur.neighbors()) {
-//                    if (!origCur.equals(neighbor))
-//                        origQ.insert(new SearchNode(neighbor, moves));
-//                }
-//
-//                for (Board neighbor : twinCur.neighbors()) {
-//                    if (!twinCur.equals(neighbor))
-//                        twinQ.insert(new SearchNode(neighbor, moves));
-//                }
-//            }
-//
-//            if (origQ.min().board.isGoal())
-//                solution.add(origQ.delMin().board);
-//                solvable = true;
-
         }
     }
 
@@ -102,16 +79,22 @@ public class Solver {
     private class SearchNode implements Comparable<SearchNode> {
         private final Board board;
         private final int man;
+        private final int moves;
 
         SearchNode(Board board, int moves) {
             this.board = board;
-            this.man = moves + board.manhattan();
+            this.man = board.manhattan();
+            this.moves = moves;
         }
 
         public int compareTo(SearchNode that) {
-            if (this.man < that.man)
+            if (this.man + moves < that.man + moves)
                 return -1;
-            else if (this.man > that.man)
+            else if (this.man + moves > that.man + moves)
+                return 1;
+            else if (this.moves < that.moves)
+                return -1;
+            else if (this.moves > that.moves)
                 return 1;
             return 0;
         }
