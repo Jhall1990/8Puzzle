@@ -16,7 +16,6 @@ public class Solver {
         if (initial.isGoal())
             solvable = true;
         else {
-            moves = 0;
             Board twin = initial.twin();
 
             MinPQ<SearchNode> origQ = new MinPQ<>();
@@ -24,12 +23,10 @@ public class Solver {
             solution = new ArrayList<>();
             solution.add(initial);
 
-            origQ.insert(new SearchNode(initial, moves));
-            twinQ.insert(new SearchNode(twin, moves));
+            origQ.insert(new SearchNode(initial, 0));
+            twinQ.insert(new SearchNode(twin, 0));
 
             while (!origQ.isEmpty() && !twinQ.isEmpty()) {
-                moves++; // can't just increment, only ++ when next level in tree.
-
                 Board origCur = origQ.delMin().board;
                 Board twinCur = twinQ.delMin().board;
                 solution.add(origCur);
@@ -44,12 +41,12 @@ public class Solver {
 
                 for (Board neighbor : origCur.neighbors()) {
                     if (!origCur.equals(neighbor))
-                        origQ.insert(new SearchNode(neighbor, moves));
+                        origQ.insert(new SearchNode(neighbor, origCur.moves++));
                 }
 
                 for (Board neighbor : twinCur.neighbors()) {
                     if (!twinCur.equals(neighbor))
-                        twinQ.insert(new SearchNode(neighbor, moves));
+                        twinQ.insert(new SearchNode(neighbor, twinCur.moves++));
                 }
             }
         }
@@ -63,7 +60,7 @@ public class Solver {
     public int moves() {
         // min number of moves to solve initial board; -1 if unsolvable
         if (solvable) {
-            return moves;
+            return solution.size();
         }
         return -1;
     }
