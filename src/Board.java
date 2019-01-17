@@ -13,6 +13,7 @@ public class Board {
             throw new IllegalArgumentException("blocks must not be null");
         }
 
+        // Make a copy of the passed blocks array.
         this.blocks = new int[blocks.length][blocks.length];
 
         for (int i = 0; i < blocks.length; i++) {
@@ -41,21 +42,23 @@ public class Board {
 
     public boolean isGoal() {
         // is this board the goal board?
+        // If hamming is equal to zero we know that all numbers are in the
+        // correct cell and therefore the puzzle is solved.
         return hamming() == 0;
     }
 
     public Board twin() {
         // a board that is obtained by exchanging any pair of blocks
-        int[][] blocksCopy = new int[dimension()][dimension()];
-        for (int i = 0; i < dimension(); i++) {
-            blocksCopy[i] = blocks[i].clone();
-        }
 
+        // Make an array list to store the first two pairs of coords that do not
+        // contain the empty space.
         ArrayList<Integer[]> coords = new ArrayList<>();
 
+        // Iterate over each cell and add the cell if it does not contain 0.
+        // Once two pairs of coords have been added break out of the loops.
         for (int i = 0; i < dimension(); i++) {
             for (int j = 0; j < dimension(); j++) {
-                if (blocksCopy[i][j] != 0)
+                if (blocks[i][j] != 0)
                     coords.add(new Integer[]{i, j});
                 if (coords.size() > 1)
                     break;
@@ -64,11 +67,13 @@ public class Board {
                 break;
         }
 
-        int copyBlockOrig = blocks[coords.get(0)[0]][coords.get(0)[1]];
-        blocksCopy[coords.get(0)[0]][coords.get(0)[1]] = blocksCopy[coords.get(1)[0]][coords.get(1)[1]];
-        blocksCopy[coords.get(1)[0]][coords.get(1)[1]] = copyBlockOrig;
+        // Grab the coords and create a new board with two coords swapped.
+        int row = coords.get(0)[0];
+        int col = coords.get(0)[1];
+        int swapRow = coords.get(1)[0];
+        int swapCol = coords.get(1)[1];
 
-        return new Board(blocksCopy);
+        return swapAndCreate(row, col, swapRow, swapCol);
     }
 
     public boolean equals(Object y) {
@@ -107,48 +112,34 @@ public class Board {
 
     public Iterable<Board> neighbors() {
         // all neighboring boards
+
+        // Create an array list to store the neighbors.
         ArrayList<Board> neighbors = new ArrayList<>();
+
+        // Find the coords of the empty space.
         int[] emptySpace = getEmptySpace();
 
+        // Move swap the empty space with up, down, left, or right, depending on
+        // the empty space's position.
         if (emptySpace.length != 0) {
+            int row = emptySpace[0];
+            int col = emptySpace[1];
+
             // move up
             if (emptySpace[0] != 0) {
-                int movedVal = blocks[emptySpace[0] - 1][emptySpace[1]];
-                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
-                blocks[emptySpace[0] - 1][emptySpace[1]] = 0;
-                neighbors.add(new Board(blocks));
-                blocks[emptySpace[0]][emptySpace[1]] = 0;
-                blocks[emptySpace[0] - 1][emptySpace[1]] = movedVal;
+                neighbors.add(swapAndCreate(row, col, row - 1, col));
             }
-
             // move down
             if (emptySpace[0] != dimension() - 1) {
-                int movedVal = blocks[emptySpace[0] + 1][emptySpace[1]];
-                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
-                blocks[emptySpace[0] + 1][emptySpace[1]] = 0;
-                neighbors.add(new Board(blocks));
-                blocks[emptySpace[0]][emptySpace[1]] = 0;
-                blocks[emptySpace[0] + 1][emptySpace[1]] = movedVal;
+                neighbors.add(swapAndCreate(row, col, row + 1, col));
             }
-
             // move left
             if (emptySpace[1] != 0) {
-                int movedVal = blocks[emptySpace[0]][emptySpace[1] - 1];
-                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
-                blocks[emptySpace[0]][emptySpace[1] - 1] = 0;
-                neighbors.add(new Board(blocks));
-                blocks[emptySpace[0]][emptySpace[1]] = 0;
-                blocks[emptySpace[0]][emptySpace[1] - 1] = movedVal;
+                neighbors.add(swapAndCreate(row, col, row, col - 1));
             }
-
             // move right
             if (emptySpace[1] != dimension() - 1) {
-                int movedVal = blocks[emptySpace[0]][emptySpace[1] + 1];
-                blocks[emptySpace[0]][emptySpace[1]] = movedVal;
-                blocks[emptySpace[0]][emptySpace[1] + 1] = 0;
-                neighbors.add(new Board(blocks));
-                blocks[emptySpace[0]][emptySpace[1]] = 0;
-                blocks[emptySpace[0]][emptySpace[1] + 1] = movedVal;
+                neighbors.add(swapAndCreate(row, col, row, col + 1));
             }
         }
 
@@ -179,6 +170,9 @@ public class Board {
     }
 
     private void getSearchCounts() {
+        // Iterate over the blocks arrays and get the hamming and manhattan counts.
+        // Hamming is the number of spaces that are in the incorrect spot.
+        // Manhattan is based on how far from the correct position the current value is.
         int expectedVal = 1;
 
         for (int i = 0; i < dimension(); i++) {
@@ -195,6 +189,7 @@ public class Board {
     }
 
     private void getManhattanCount(int row, int col) {
+        // Gets the total number of spaces away from the goal space for a given value.
         int val = blocks[row][col] - 1;
         int correctRow = val / dimension();
         int correctCol = val;
@@ -210,7 +205,7 @@ public class Board {
     private int[] getEmptySpace() {
         // Checks the current blocks array to find the empty space.
         // Returns an array of ints where int[0] = x and int[1] = y.
-        // Returns null if no empty space is found.
+        // Returns an empty array if no empty space is found.
 
         for (int i = 0; i < dimension(); i++) {
             for (int j = 0; j < dimension(); j++) {
@@ -220,5 +215,25 @@ public class Board {
             }
         }
         return new int[0];
+    }
+
+    private Board swapAndCreate(int row, int col, int swapRow, int swapCol) {
+        // Store the original value at row/col.
+        int origVal = blocks[row][col];
+
+        // Set row/col equal to the swap row/col.
+        blocks[row][col] = blocks[swapRow][swapCol];
+
+        // Set the swap row/col equal to the original value.
+        blocks[swapRow][swapCol] = origVal;
+
+        // Create a new board with the swapped cells.
+        Board b = new Board(blocks);
+
+        // Restore blocks to its original state.
+        blocks[swapRow][swapCol] = blocks[row][col];
+        blocks[row][col] = origVal;
+
+        return b;
     }
 }
