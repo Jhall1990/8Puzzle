@@ -2,54 +2,61 @@ import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.MinPQ;
 import edu.princeton.cs.algs4.StdOut;
 
-import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
 
 public class Solver {
-    private boolean solvable;
+    private boolean solvable = false;
     private int moves;
-    private ArrayList<Board> solution;
+    private SearchNode solution;
+    private final Iterable<Board> solutionIter;
 
     public Solver(Board initial) {
         // find a solution to the initial board (using the A* algorithm)
-        solvable = false;
+        if (initial == null) {
+            throw new IllegalArgumentException("initial board cannot be null.");
+        }
 
-        if (initial.isGoal())
+        if (initial.isGoal()) {
             solvable = true;
-        else {
+            solution = new SearchNode(null, initial);
+        } else {
             Board twin = initial.twin();
 
             MinPQ<SearchNode> origQ = new MinPQ<>();
             MinPQ<SearchNode> twinQ = new MinPQ<>();
-            solution = new ArrayList<>();
-            solution.add(initial);
 
-            origQ.insert(new SearchNode(initial, 0));
-            twinQ.insert(new SearchNode(twin, 0));
+            origQ.insert(new SearchNode(null, initial));
+            twinQ.insert(new SearchNode(null, twin));
 
             while (!origQ.isEmpty() && !twinQ.isEmpty()) {
-                Board origCur = origQ.delMin().board;
-                Board twinCur = twinQ.delMin().board;
-                solution.add(origCur);
+                SearchNode origCur = origQ.delMin();
+                SearchNode twinCur = twinQ.delMin();
 
-                if (origCur.isGoal()) {
+                if (origCur.board.isGoal()) {
                     solvable = true;
+                    solution = origCur;
                     break;
                 }
-                if (twinCur.isGoal()) {
+                if (twinCur.board.isGoal()) {
                     break;
                 }
 
-                for (Board neighbor : origCur.neighbors()) {
-                    if (!origCur.equals(neighbor))
-                        origQ.insert(new SearchNode(neighbor, origCur.moves++));
+                for (Board neighbor : origCur.board.neighbors()) {
+                    if (origCur.parent == null || !origCur.parent.board.equals(neighbor))
+                        origQ.insert(new SearchNode(origCur, neighbor));
                 }
 
-                for (Board neighbor : twinCur.neighbors()) {
-                    if (!twinCur.equals(neighbor))
-                        twinQ.insert(new SearchNode(neighbor, twinCur.moves++));
+                for (Board neighbor : twinCur.board.neighbors()) {
+                    if (twinCur.parent == null || !twinCur.parent.board.equals(neighbor))
+                        twinQ.insert(new SearchNode(twinCur, neighbor));
                 }
             }
         }
+
+        solutionIter = solution();
+
     }
 
     public boolean isSolvable() {
@@ -59,16 +66,27 @@ public class Solver {
 
     public int moves() {
         // min number of moves to solve initial board; -1 if unsolvable
-        if (solvable) {
-            return solution.size();
-        }
-        return -1;
+        if (solvable)
+            return moves;
+        else
+            return -1;
     }
 
     public Iterable<Board> solution() {
         // sequence of boards in a shortest solution; null if unsolvable
         if (solvable) {
-            return solution;
+            if (solutionIter == null) {
+                Deque<Board> solutionBoards = new ArrayDeque<>();
+                solutionBoards.push(solution.board);
+
+                while (solution.parent != null) {
+                    solutionBoards.push(solution.parent.board);
+                    solution = solution.parent;
+                    moves++;
+                }
+                return solutionBoards;
+            }
+            return solutionIter;
         }
         return null;
     }
@@ -77,21 +95,28 @@ public class Solver {
         private final Board board;
         private final int man;
         private final int moves;
+        private final SearchNode parent;
 
-        SearchNode(Board board, int moves) {
+        SearchNode(SearchNode parent, Board board) {
+            this.parent = parent;
             this.board = board;
-            this.man = board.manhattan();
-            this.moves = moves;
+
+            if (parent == null)
+                this.moves = 0;
+            else
+                this.moves = parent.moves + 1;
+
+            this.man = board.manhattan() + moves;
         }
 
         public int compareTo(SearchNode that) {
-            if (this.man + moves < that.man + moves)
+            if (this.man < that.man)
                 return -1;
-            else if (this.man + moves > that.man + moves)
+            else if (this.man > that.man)
                 return 1;
-            else if (this.moves < that.moves)
+            else if (this.board.hamming() < that.board.hamming())
                 return -1;
-            else if (this.moves > that.moves)
+            else if (this.board.hamming() > that.board.hamming())
                 return 1;
             return 0;
         }
@@ -121,6 +146,5 @@ public class Solver {
                 StdOut.println(board);
         }
     }
-
-
 }
+

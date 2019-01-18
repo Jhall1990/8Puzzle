@@ -22,7 +22,6 @@ public class Board {
 
         // Update ham and man counts.
         getSearchCounts();
-
     }
 
     public int dimension() {
