@@ -18,31 +18,49 @@ public class Solver {
             throw new IllegalArgumentException("initial board cannot be null.");
         }
 
+        // Check if the initial board is already solved.
         if (initial.isGoal()) {
             solvable = true;
             solution = new SearchNode(null, initial);
         } else {
+            // Create a twin board. This is needed to figure out if the
+            // passed board is solvable.
             Board twin = initial.twin();
 
+            // Create two priority queues. One for solving the original board
+            // and one for solving the twin board.
             MinPQ<SearchNode> origQ = new MinPQ<>();
             MinPQ<SearchNode> twinQ = new MinPQ<>();
 
+            // Insert the initial board into their respective queues.
             origQ.insert(new SearchNode(null, initial));
             twinQ.insert(new SearchNode(null, twin));
 
+            // Continue looping over the two priority queues while neither
+            // of them are empty.
             while (!origQ.isEmpty() && !twinQ.isEmpty()) {
+                // Get the current board from each queue.
                 SearchNode origCur = origQ.delMin();
                 SearchNode twinCur = twinQ.delMin();
 
+                // First check if the original board is solved.
+                // If it is set solvable to true and update the
+                // solution board, then break out of the loop.
                 if (origCur.board.isGoal()) {
                     solvable = true;
                     solution = origCur;
                     break;
                 }
+                // If the original board is not solved check if the
+                // twin board is solved. If it is break, solvable is
+                // already set to false so we don't need to update it.
                 if (twinCur.board.isGoal()) {
                     break;
                 }
 
+                // If no goal boards is found get the neighbor boards for the original
+                // and twin boards. Before adding any board to the PQ make sure it's not
+                // the same as current board's parent board.
                 for (Board neighbor : origCur.board.neighbors()) {
                     if (origCur.parent == null || !origCur.parent.board.equals(neighbor))
                         origQ.insert(new SearchNode(origCur, neighbor));
@@ -55,6 +73,7 @@ public class Solver {
             }
         }
 
+        // Create the solution iterable.
         solutionIter = solution();
 
     }
